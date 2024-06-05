@@ -56,6 +56,12 @@ const client = new MongoClient(uri, {
 
 
       //users
+
+      app.get("/user", async (req, res) => {
+        const shoesData = userCollection.find();
+        const result = await shoesData.toArray();
+        res.send(result);
+      });
       app.post('/user',async(req,res)=>
       {
         const userinfo=req.body;

@@ -1,9 +1,10 @@
 require("dotenv").config();
 const express = require('express')
 const app = express()
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const port =process.env.PORT;
+const { MongoClient, ServerApiVersion , ObjectId} = require('mongodb');
+const port =process.env.PORT||5000;
 const cors=require('cors')
+
 
 const jwt = require('jsonwebtoken');
 app.use(cors())
@@ -18,14 +19,14 @@ function accessToken(user)
   return token;
 }
 
-function VerifyToken(req,res,next){
-const token=req.headers.authorization.split("")[1]
-const verify=jwt.verify(token,"secret");
-if(!verify?.email){
-  return res.send('you are not authorized')
-}
-req.user=verify.email;
-  next()
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization.split(" ")[1];
+  const verify = jwt.verify(token, "secret");
+  if (!verify?.email) {
+    return res.send("You are not authorized");
+  }
+  req.user = verify.email;
+  next();
 }
 
 //password:Wk0T1H95gBKRF2Ue
@@ -43,23 +44,48 @@ const client = new MongoClient(uri, {
       await client.connect();
       const productdb = client.db("productdb");
       const userdb=client.db('userdb')
-      const shoescollection = productdb.collection("shoescollection");
-     const userCollection=userdb.collection('usercollection')
+      const cameracollection = productdb.collection("shoescollection");
+     const userCollection=userdb.collection('usercollection');
       //proucts 
 
-      app.post("/shoes",VerifyToken,async(req,res)=>
+      app.post("/cameras",verifyToken,async(req,res)=>
       {
        const showdata=req.body;
-       const result=await shoescollection.insertOne(showdata) 
+       const result=await cameracollection.insertOne(showdata);
         res.send(result)
       });
 
+      app.get("/cameras", async (req, res) => {
+        const cameraData = cameracollection.find();
+        const result = await cameraData.toArray();
+        res.send(result);
+      });
+      app.get("/cameras/:id", async (req, res) => {
+        const id = req.params.id;
+        const cameraData = await cameracollection.findOne({
+          _id: new ObjectId(id),
+        });
+        res.send(cameraData);
+      });
+    app.patch("/cameras/:id",verifyToken,  async (req, res) => {
+      const id = req.params.id;
+      const updatedData = req.body;
+      const result = await cameracollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedData }
+      );
+      res.send(result);
+    });
+    app.delete("/cameras/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await cameracollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
       //users
-
       app.get("/user", async (req, res) => {
-        const shoesData = userCollection.find();
-        const result = await shoesData.toArray();
+        const user = userCollection.find();
+        const result = await user.toArray();
         res.send(result);
       });
       app.post('/user',async(req,res)=>
@@ -79,6 +105,29 @@ const client = new MongoClient(uri, {
        await userCollection.insertOne(userinfo);
        res.send({token})
       })
+      app.get("/user/get/:id", async (req, res) => {
+        const id = req.params.id;
+        console.log(id);
+        const result = await userCollection.findOne({ _id: new ObjectId(id) });
+        res.send(result);
+      });
+  
+      app.get("/user/:email", async (req, res) => {
+        const email = req.params.email;
+        const result = await userCollection.findOne({ email });
+        res.send(result);
+      }); 
+  
+      app.patch("/user/:email", async (req, res) => {
+        const email = req.params.email;
+        const userData = req.body;
+        const result = await userCollection.updateOne(
+          { email },
+          { $set: userData },
+          { upsert: true }
+        );
+        res.send(result);
+      });
       
       console.log(" successfully connected to MongoDB!");
     } finally {

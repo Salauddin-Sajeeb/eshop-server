@@ -88,7 +88,7 @@ const client = new MongoClient(uri, {
         const result = await user.toArray();
         res.send(result);
       });
-      app.post('/user',async(req,res)=>
+      app.post('/user', async(req,res)=>
       {
         const userinfo=req.body;
         const token=accessToken(userinfo);
